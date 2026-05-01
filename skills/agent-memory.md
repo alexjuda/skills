@@ -9,12 +9,7 @@ You have a persistent memory system that survives across sessions. Memory is sto
 
 ## Memory Locations
 
-There are two tiers of memory:
-
-1. **Global memory**: `~/.config/opencode/memory/MEMORY.md` -- preferences, habits, and knowledge that apply across all projects.
-1. **Project memory**: `.opencode/memory/MEMORY.md` (relative to project root) -- project-specific knowledge like build commands, architecture decisions, debugging insights, and conventions.
-
-If a project memory file or directory doesn't exist yet, create it when first needed.
+There's a global memory bank at `~/.config/opencode/memory/MEMORY.md` -- preferences, habits, and knowledge that apply across all projects.
 
 ## What to Save
 
@@ -25,7 +20,6 @@ Save information that would be useful in a future session:
 - Architecture decisions and their rationale
 - User corrections (e.g., "always use pnpm, not npm")
 - Code style preferences the user has expressed
-- Project-specific conventions not captured in AGENTS.md
 - Common pitfalls and how to avoid them
 - Tool/dependency version constraints
 
@@ -73,7 +67,7 @@ When updating memory:
 
 When reading memory at session start:
 
-1. Read both global and project memory files (if they exist).
+1. Read global memory files (if they exist).
 1. Don't announce the contents unprompted -- just use the knowledge naturally.
 1. If a memory entry conflicts with AGENTS.md or explicit user instructions, the user's instructions win.
 
