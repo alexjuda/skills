@@ -421,28 +421,7 @@ print(f"Created invoice {invoice.id}, due {invoice.due_date}")
 
 Operational interfaces deserve the same design attention as developer interfaces. An on-call engineer navigating an incident is a user with a goal: understand what broke and why.
 
-### Structured Logging as Signifier Design
-
-```python
-# Weak — minimal signal, hard to filter, hard to correlate
-logger.error(f"Failed to process payment for user {user_id}: {str(e)}")
-
-# Strong — every field is a navigable dimension
-logger.error("payment_processing_failed",
-    event="payment_processing_failed",
-    user_id=user_id,
-    charge_id=charge_id,
-    amount_cents=amount,
-    currency=currency,
-    gateway_error_code=e.code,
-    gateway_error_message=e.message,
-    attempt=retry_count,
-    correlation_id=request.id,
-    duration_ms=elapsed,
-)
-```
-
-**Rule:** Log events, not states. `payment_processing_failed` with context is far more useful than `error: payment failed` — it names what happened (event), not just that something is wrong (state).
+> **Note:** For structured logging patterns as signifiers, see [principles-reference.md](./principles-reference.md#signifiers--extended) — covers observability signifiers, structured logging, and event naming.
 
 ### Dashboard as Hierarchy at Every Scale
 

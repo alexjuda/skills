@@ -245,6 +245,7 @@ user = User(name="Alice", email="alice@example.com", role=Role.ADMIN)
 **CLI output signal-to-noise:**
 - Progress output: every line should tell the user something they didn't know. If 95% of lines are "processing file X...", that's noise.
 - Errors: the error message is the entire signal. Avoid stack traces by default; surface them only on `--verbose`.
+- For detailed feedback patterns (timing thresholds, progress indicators, failure messages), see [patterns-library.md](./patterns-library.md#feedback-contract) — applies signal-to-noise principles to CLI user experience.
 
 ---
 
