@@ -1,6 +1,6 @@
 # Principles Reference
 
-Full citations, extended examples, and negative-transfer warnings for each lens in the design-wisdom-for-software skill.
+Full citations, extended examples, and negative-transfer warnings for each lens in the design-theory-for-software skill.
 
 ---
 

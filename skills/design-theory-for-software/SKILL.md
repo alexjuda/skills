@@ -1,5 +1,5 @@
 ---
-name: design-wisdom-for-software
+name: design-theory-for-software
 description: Use when designing APIs, modules, CLIs, or system architecture — and when reviewing existing code for structural quality. Applies design wisdom from graphic, industrial, and UX design to software engineering decisions. Not for UI pixel work; for the shape of interfaces, abstractions, and systems.
 ---
 
