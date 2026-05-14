@@ -215,25 +215,39 @@ compatibility: opencode, claude-code
 
 ## ★ Testing
 
-- Don't use mocks unless necessary — prefer real objects. Use fixtures, fakes, or dependency injection instead. Mocks are OK for external APIs, time-dependent code.
+- Write tests for correct behavior, not for bugs. Don't assert the buggy result — assert what the code *should* do.
 
   ```python
-  # Bad: over-mocking
-  with mock.patch("requests.get") as mock_get:
-      mock_get.return_value.json.return_value = {"id": 1}
-      result = fetch_user()
+  # Bad: exit_code == 0 is the bug (unhandled exception silently exits 0)
+  def test_status_outside_git():
+      result = runner.invoke(cli, ["status"])
+      assert result.exit_code == 0  # only passes because of the bug
 
-  # Good: use fixtures
-  @pytest.fixture
-  def sample_user():
-      return {"id": 1, "name": "Test"}
+  # Good: assert the intended behavior
+  def test_status_outside_git():
+      with runner.isolated_filesystem():
+          result = runner.invoke(cli, ["status"])
+      assert result.exit_code != 0
+      assert "not a git repository" in result.output
+  ```
+- Prefer real objects, fakes, fixtures, or DI over mocks. Always isolate from external systems (network, subprocess calls, time) — unmocked externals cause hangs, flakiness, and test pollution. Use `patch()` for true externals; use fakes or fixtures for internal collaborators.
 
-  # Good: use Fake classes
+  ```python
+  # Bad: over-mocking internal logic
+  with mock.patch("myapp.validator.check") as m:
+      m.return_value = True
+      result = process()
+
+  # Bad: unmocked subprocess may hang CI
+  def test_status():
+      result = runner.invoke(cli, ["status"])  # runs real git
+
+  # Good: fake for internal collaborators
   class FakeGitHubClient:
       def fetch(self, repo):
           return {"stars": 100}
 
-  # Good: mocks OK for external services
+  # Good: patch true externals (network, subprocess)
   with mock.patch("httpx.Client.get") as mock_get:
       mock_get.return_value = Response(200, json={"id": 1})
       result = api_call()
@@ -331,6 +345,19 @@ compatibility: opencode, claude-code
 
   # Simple tests: one function is fine
   def test_parse_empty_returns_none(): ...
+  ```
+
+## Common pitfalls
+
+- **Regex matching**: Use `re.search()` when the pattern can appear anywhere in a string. `re.match()` only matches from position 0.
+
+  ```python
+  # Bad: match only finds at string start
+  url = "git@github.com:owner/repo.git"
+  re.match(r"github\.com[:/]", url)  # None
+
+  # Good: search finds anywhere in string
+  re.search(r"github\.com[:/]", url)  # Match found
   ```
 
 ## Tooling
