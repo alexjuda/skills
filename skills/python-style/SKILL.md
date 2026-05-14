@@ -151,7 +151,23 @@ compatibility: opencode, claude-code
 
 ## Architecture
 
-- Data classes: Use `dataclass` for simple DTOs with no validation. Use `dataclass` + `msgspec` for fast serialization. Use `pydantic` when you need validation + OpenAPI schema. Use `TypedDict` when integrating with dict-returning code outside your control.
+- Data classes: Use `dataclass` for simple DTOs with no validation. Use `dataclass` + `msgspec` for fast serialization. Use `pydantic` when you need validation + OpenAPI schema. Use `TypedDict` when integrating with dict-returning code outside your control. Prefer `@dataclass` over `typing.NamedTuple` — dataclass is more flexible (can add methods, defaults, validators) and the syntax is cleaner.
+
+  ```python
+  # Bad: NamedTuple - less flexible
+  class Point(NamedTuple):
+      x: int
+      y: int
+
+  # Good: dataclass - can add methods, defaults, validation
+  @dataclass
+  class Point:
+      x: int
+      y: int
+
+      def distance_from_origin(self) -> float:
+          return math.sqrt(self.x ** 2 + self.y ** 2)
+  ```
 
   ```python
   # dataclass: simple DTO, no validation
@@ -358,6 +374,50 @@ compatibility: opencode, claude-code
 
   # Good: search finds anywhere in string
   re.search(r"github\.com[:/]", url)  # Match found
+  ```
+
+- **Redundant config**: Don't specify tool config that matches defaults. This adds noise without benefit.
+
+  ```python
+  # Bad: redundant defaults
+  [tool.pytest.ini_options]
+  python_functions = ["test_*"]  # pytest default
+  python_classes = ["Test*"]  # pytest default
+
+  # Good: only specify what differs from defaults
+  [tool.pytest.ini_options]
+  asyncio_mode = "auto"
+  ```
+
+- **Local imports in tests**: Always use module-level imports. Local imports inside functions indicate a code smell and slow test collection.
+
+  ```python
+  # Bad: local import inside test
+  def test_something():
+      from rv.module import something  # slow, hides dependency
+
+  # Good: top-level import
+  from rv.module import something
+
+  def test_something():
+      assert something() == expected
+  ```
+
+- **Plain `except`**: Never use bare `except:` or catch generic `Exception`. Catch specific exception types. This masks bugs and makes debugging harder.
+
+  ```python
+  # Bad: catches everything including KeyboardInterrupt
+  try:
+      do_something()
+  except Exception:
+      pass
+
+  # Good: catch specific exceptions
+  import keyring.errors
+  try:
+      token = keyring.get_password("rv", "github")
+  except (keyring.errors.NoKeyringError, keyring.errors.KeyringError):
+      pass  # keyring not available, continue to fallback
   ```
 
 ## Tooling
