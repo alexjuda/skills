@@ -42,6 +42,10 @@ Repeat for each test case.
 - Fast feedback: run tests every few minutes
 - One test at a time: write one, not multiple
 
+## Post-TDD: Verify Integration
+
+After completing the TDD cycle, add VCR cassettes or snapshots for integration tests that exercise real I/O boundaries. The unit tests you wrote during TDD verify logic in isolation; integration tests verify that the system works end-to-end. Recorded cassettes preserve the Predictive vs. Fast tradeoff — fast enough to run as part of the main suite, predictive enough to catch real regressions.
+
 ## Connecting to Test Desiderata
 
 See [test-desiderata skill](/skills/test-desiderata/SKILL.md). TDD works best with tests that are isolated, fast, readable, behavioral, and specific.

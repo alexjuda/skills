@@ -424,6 +424,7 @@ compatibility: opencode, claude-code
 
 - Package manager: `uv`. Use `uv add <package>` for production deps or `uv add --dev <package>` for dev deps. Why: uv manages lockfiles and dependency resolution automatically.
 - Testing: `pytest`. Run by `make test` in the project directory.
+- Integration tests: Use `pytest-recording` (VCR) for network-dependent tests. Record real API responses as cassettes checked into the repo. Cassettes make integration tests deterministic, fast, and CI-friendly — no network access required after recording.
 - Linting/formatting: `make lint` in the project directory. Use `make lint-fix` to reformat automatically. CI should run `make lint` without fix.
 - Type checking: `make ty` in the project directory.
 

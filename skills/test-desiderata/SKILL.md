@@ -48,6 +48,20 @@ Some properties tension each other:
 
 The resolution is often composability: test units in isolation (fast, specific) and compose them into a smaller number of integration tests that are predictive. Avoid the trap of treating all 12 as equally mandatory — choose the right tradeoff for the test layer you are writing.
 
+**VCR/snapshot testing** is a pattern that specifically resolves Predictive vs. Fast: record real API responses as cassettes checked into the repo. Tests run against recorded data (fast, deterministic) that mirrors real production responses (predictive). Re-record when the API contract changes.
+
+## De-duplicate across test layers
+
+When adding integration tests, look for unit tests that cover the same code path through the same interface. Integration tests are inherently more predictive (real I/O boundaries, real serialization). A unit test asserting the same behavior through the same interface adds cost (slower suite, more to maintain) without adding confidence. Remove redundant unit tests.
+
+Keep unit tests for edge cases that integration tests *cannot* reproduce:
+- Specific HTTP error codes the real API never returns
+- Timeout scenarios
+- Malformed response bodies
+- Boundary conditions on derived values (not raw API output)
+
+Recognize the tradeoff: integration tests are more predictive but less controllable. Edge-case unit tests fill the gaps that integration tests can't reach.
+
 ## Reflection prompts
 
 When writing a test, ask:
