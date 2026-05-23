@@ -85,6 +85,23 @@ compatibility: opencode, claude-code
           super().__init__(f"Rate limited, retry after {retry_after}s")
   ```
 
+## ★ Naming
+
+- Never use `Manager` or `Util` in names. These names describe nothing — everything manages or is useful. Name by what the thing *is* or *does*, not by its category.
+
+  ```python
+  # Bad
+  class CacheManager: ...
+  class StringUtils: ...
+
+  # Good: describes the role
+  class CacheStore: ...        # stores/retrieves cache entries
+  class TokenService: ...      # provides token operations
+  class ThreadFormatter: ...   # formats thread output
+  class RateLimiter: ...       # limits rates
+  ```
+- Prefer concrete domain names: `Store`, `Repository`, `Service`, `Client`, `Provider`, `Formatter`, `Parser`. Choose the word that matches what the thing does.
+
 ## Code conventions
 
 - Paths: Use descriptive constants instead of hardcoded strings. Define at module level.
@@ -246,6 +263,25 @@ compatibility: opencode, claude-code
       assert result.exit_code != 0
       assert "not a git repository" in result.output
   ```
+- Keep mocking shallow — if a test needs 3+ levels of `patch()` nesting, restructure the code instead. Deep mocking means the test knows too much about internals and the code isn't designed for testability. Use dependency injection or context injection so tests provide fakes directly.
+
+  ```python
+  # Bad: 9 levels of patch to test a CLI command
+  with patch("cli.is_git_repo"):
+      with patch("cli.get_current_branch"):
+          with patch("cli.get_remote_origin"):
+              with patch("cli._find_pr_number"):
+                  with patch("cli.check_head_mismatch"):
+                      with patch("cli.CacheManager"): ...
+
+  # Good: inject context object, test provides fakes in one level
+  result = runner.invoke(cli, ["status"], obj={
+      "repo_context": RepoContext(...),
+      "cache": FakeCache(threads=[...]),
+  })
+  ```
+
+  Common injection hooks for Click CLIs: `obj` dict on the context for repo state, cached data, auth tokens. Outside Click, use function parameters with optional injection points.
 - Prefer real objects, fakes, fixtures, or DI over mocks. Always isolate from external systems (network, subprocess calls, time) — unmocked externals cause hangs, flakiness, and test pollution. Use `patch()` for true externals; use fakes or fixtures for internal collaborators.
 
   ```python
