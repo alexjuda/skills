@@ -403,6 +403,29 @@ compatibility: opencode, claude-code
       assert something() == expected
   ```
 
+- **Module-level side effects**: Never execute I/O or printing at module level — it breaks tests on import. Put side-effectful code in functions or entry points.
+
+  ```python
+  # Bad: runs on import
+  click.echo(f"starting...")
+
+  # Good: wrapped in function
+  def main() -> None:
+      click.echo(f"starting...")
+  ```
+
+- **`or` chains for dict access**: `x.get("a") or x.get("b")` fails when value `"a"` is falsy (0, `""`, `[]`). Use explicit fallback:
+
+  ```python
+  # Bad: masks 0, "", [] as "not found"
+  repo = data.get("repo") or data.get("project")
+
+  # Good: explicit None check
+  repo = data.get("repo")
+  if repo is None:
+      repo = data.get("project")
+  ```
+
 - **Plain `except`**: Never use bare `except:` or catch generic `Exception`. Catch specific exception types. This masks bugs and makes debugging harder.
 
   ```python
