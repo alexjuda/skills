@@ -44,13 +44,10 @@ Repeat for each test case.
 
 ## Post-TDD: Verify Integration
 
-After completing the TDD cycle, add integration tests that exercise real I/O boundaries against real dependencies (git repos, API servers, filesystem). The unit tests you wrote during TDD verify logic in isolation; integration tests verify that the system works end-to-end.
+Integration tests exercise real I/O boundaries (git repos, APIs, filesystem).
 
-For HTTP-based adapters, follow a two-phase approach:
-1. **Real API first** — get tests passing against the real service with a credential env var (e.g., `GITHUB_TOKEN`). Validate the adapter works correctly end-to-end.
-2. **Record cassettes second** — once the implementation is solid, add VCR/pytest-recording to capture responses. Cassettes make the tests deterministic and CI-friendly without requiring credentials.
-
-For filesystem/subprocess adapters, use real dependencies directly in integration tests (temp dirs for git repos, real subprocess calls). The adapter layer is where predictive confidence matters most — trade raw speed for realism.
+- **HTTP adapters**: Real API first (credential env var), VCR cassettes second for CI replay.
+- **Filesystem/subprocess**: Use real deps directly (temp dirs, real subprocess). Adapter confidence > test speed.
 
 ## Connecting to Test Desiderata
 

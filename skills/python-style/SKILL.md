@@ -246,6 +246,66 @@ compatibility: opencode, claude-code
   __all__ = ["parse"]
   ```
 
+### Dependency injection: Protocol over ABC
+
+Use `Protocol` over `ABC` — structural matching without explicit inheritance.
+
+```python
+# Bad: must inherit
+class GitHubForge(Forge): ...
+
+# Good: no inheritance needed
+class GitHub:
+    def find_pr(self, repo: str) -> Pr | None: ...
+```
+
+For test doubles: `create_autospec(Protocol)` or handwritten `Fake` classes — both fine, depends on the use case. Never use plain `Mock()` — it doesn't catch mock-implementation drift.
+
+```python
+forge = create_autospec(Forge)
+forge.find_pr.return_value = Pr(number=1, title="Fix")
+```
+
+### Credential management
+
+- **Never store credentials in source or config** checked into the repo.
+- **Prefer env var → CLI chain**: `GITHUB_TOKEN` with fallback to `gh auth token`. Avoid keyring — fragile on headless Linux, WSL, containers.
+- **Fail cleanly**: Raise an actionable error telling the user how to provide the credential.
+
+```python
+class TokenNotFound(Exception):
+    pass
+
+def _get_token() -> str:
+    token = os.environ.get("GITHUB_TOKEN")
+    if token:
+        return token
+    try:
+        return subprocess.check_output(["gh", "auth", "token"], text=True).strip()
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        raise TokenNotFound("Set GITHUB_TOKEN or run `gh auth login`")
+```
+
+### Async policy
+
+- **Async where I/O happens**: HTTP adapters use `async def` + `httpx.AsyncClient`. Parsing and CLI stay sync.
+- **Propagate through ports**: If a protocol method is async, callers become async too. Don't half-measure.
+- **Not cargo-cult async**: Only network boundaries need async. Async adds cognitive overhead — don't pay without network I/O.
+
+```python
+class Forge(Protocol):
+    async def find_pr_for_branch(self, repo: str, branch: str) -> Pr | None: ...
+
+class Pull:
+    async def plan(self) -> None:  # async because forge is async
+        pr = await self._forge.find_pr_for_branch("owner/repo", "main")
+
+class GitHub:
+    @staticmethod
+    def parse_repo(url: str) -> tuple[str, str] | None:  # sync — no I/O
+        ...
+```
+
 ## ★ Testing
 
 - Write tests for correct behavior, not for bugs. Don't assert the buggy result — assert what the code *should* do.
@@ -283,6 +343,28 @@ compatibility: opencode, claude-code
 
   Common injection hooks for Click CLIs: `obj` dict on the context for repo state, cached data, auth tokens. Outside Click, use function parameters with optional injection points.
 - Prefer real objects, fakes, fixtures, or DI over mocks. Always isolate from external systems (network, subprocess calls, time) — unmocked externals cause hangs, flakiness, and test pollution. Use `patch()` for true externals; use fakes or fixtures for internal collaborators.
+
+  **I/O adapter tests**: use **real dependencies**, not patches. The adapter's job IS real I/O. Skip tests lacking env vars.
+
+  ```python
+  @pytest.mark.skipif("GITHUB_TOKEN" not in os.environ, reason="requires GITHUB_TOKEN")
+  @pytest.mark.asyncio
+  async def test_finds_pr_for_branch(real_github: GitHub):
+      pr = await real_github.find_pr_for_branch("owner/repo", "main")
+      assert pr.number == 1
+  ```
+
+  **Credential fixture hygiene**: Separate fixtures for fake vs. real tokens. Don't leak credential fixtures into tests that don't need them.
+
+  ```python
+  @pytest.fixture
+  def github():  # fake token
+      return GitHub(token="fake-token")
+
+  @pytest.fixture
+  def real_github():  # real token from env
+      return GitHub(token=os.environ["GITHUB_TOKEN"])
+  ```
 
   ```python
   # Bad: over-mocking internal logic
@@ -356,6 +438,21 @@ compatibility: opencode, claude-code
           def test_writes_to_file(): ...
   ```
 - Use `@staticmethod` on test methods that don't need `self`.
+- Async fixtures with real I/O must clean up to avoid `ResourceWarning`. Use `@pytest_asyncio.fixture` with `async with`:
+
+  ```python
+  # Bad:
+  @pytest_asyncio.fixture
+  async def real_github():
+      gh = GitHub(client=httpx.AsyncClient())  # never closed!
+      yield gh
+
+  # Good:
+  @pytest_asyncio.fixture
+  async def real_github():
+      async with httpx.AsyncClient() as client:
+          yield GitHub(client=client)
+  ```
 
   ```python
   class TestParser:
@@ -483,7 +580,7 @@ compatibility: opencode, claude-code
 
 - Package manager: `uv`. Use `uv add <package>` for production deps or `uv add --dev <package>` for dev deps. Why: uv manages lockfiles and dependency resolution automatically.
 - Testing: `pytest`. Run by `make test` in the project directory.
-- Integration tests: Use `pytest-recording` (VCR) for network-dependent tests. Record real API responses as cassettes checked into the repo. Cassettes make integration tests deterministic, fast, and CI-friendly — no network access required after recording.
+- Integration tests: `pytest-recording` (VCR) for network tests. Two-phase: real API first with credential env var, then record cassettes for CI. Filter credentials via `filter_headers`.
 - Linting/formatting: `make lint` in the project directory. Use `make lint-fix` to reformat automatically. CI should run `make lint` without fix.
 - Type checking: `make ty` in the project directory.
 

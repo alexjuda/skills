@@ -14,9 +14,9 @@ I guide test authoring using Kent Beck's Test Desiderata — 12 properties that 
 
 **Composable** — Different dimensions of variability can be tested separately and results combined. Enables targeted, focused tests that can be mixed and matched.
 
-**Deterministic** — If nothing changes, the test result does not change. Eliminate sources of non-determinism: time, randomness, network, filesystem ordering.
+**Deterministic** — If nothing changes, the test result does not change. Eliminate sources of non-determinism: time, randomness, network, filesystem ordering. **Exception: I/O adapter tests** — the adapter intentionally exercises that non-deterministic boundary. Validate against real API during development; use VCR cassettes for CI replay.
 
-**Fast** — Tests run quickly. Prefer in-process fakes over real I/O; reserve slow integration tests for a separate suite.
+**Fast** — Tests run quickly. Prefer in-process fakes over real I/O; reserve slow integration tests for a separate suite. **Exception: I/O adapter tests** — the adapter's job IS real I/O. Use real dependencies; predictive confidence > test speed here.
 
 **Writable** — Tests are cheap to write relative to the cost of the code under test. Reduce boilerplate; invest in test helpers and builders where the payoff is clear.
 
@@ -48,7 +48,32 @@ Some properties tension each other:
 
 The resolution is often composability: test units in isolation (fast, specific) and compose them into a smaller number of integration tests that are predictive. Avoid the trap of treating all 12 as equally mandatory — choose the right tradeoff for the test layer you are writing.
 
-**VCR/snapshot testing** is a pattern that specifically resolves Predictive vs. Fast: record real API responses as cassettes checked into the repo. Tests run against recorded data (fast, deterministic) that mirrors real production responses (predictive). Re-record when the API contract changes.
+**Adapter tests**: **predictive wins over fast**. The adapter is where integration bugs live. Reserve fast fakes for domain/action tests with injected dependencies.
+
+**VCR/snapshot testing** resolves Predictive vs. Fast: record real API responses as cassettes. Re-record when the API contract changes.
+
+Two-phase approach: (1) real API first with credential env var, (2) record cassettes for CI. Filter credentials via `filter_headers`. Never store real tokens in cassettes.
+
+**Credential hygiene**: Separate fixtures for fake vs. real tokens. Don't leak credential fixtures into tests that don't need them.
+
+## Cleanup hygiene
+
+Integration tests with real I/O need explicit cleanup. Unclosed `AsyncClient` or file handles produce `ResourceWarning`.
+
+**Async fixtures**: use `@pytest_asyncio.fixture` with `async with` or `await resource.aclose()`.
+
+```python
+# Bad:
+@pytest_asyncio.fixture
+async def api():
+    return GitHub(client=httpx.AsyncClient())  # never closed!
+
+# Good:
+@pytest_asyncio.fixture
+async def real_github():
+    async with httpx.AsyncClient() as client:
+        yield GitHub(client=client)
+```
 
 ## De-duplicate across test layers
 
