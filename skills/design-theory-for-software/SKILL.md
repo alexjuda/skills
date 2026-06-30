@@ -11,6 +11,17 @@ Good software design and good industrial/graphic design share deep structure. Th
 
 ---
 
+## Companion Files — Load Before Using
+
+This skill has two companion files with extended content. Load them now with `Read`:
+
+- **[principles-reference.md](./principles-reference.md)** — Full citations, extended examples, negative transfer warnings for every lens
+- **[patterns-library.md](./patterns-library.md)** — Concrete patterns for APIs, CLIs, module organization, documentation, and observability
+
+Inline references below point to relevant sections in these files.
+
+---
+
 ## When to Invoke
 
 - Designing a new API, module interface, or CLI command surface
@@ -56,6 +67,8 @@ create_user(*, name: str, email: Email, role: Role) -> User
 
 **Red flag:** If correct usage requires reading the implementation.
 
+> See [principles-reference.md](./principles-reference.md) for the critical affordance/signifier distinction and negative transfer warnings.
+
 ---
 
 ### 2. Signifiers — Does the design guide toward correct usage?
@@ -80,6 +93,8 @@ class DateRange:
 
 **CLI signifier:** `Error: --config is required. Run 'mytool init' to generate one.` — not just "missing flag."
 
+> See [principles-reference.md](./principles-reference.md) for the four levels of signifiers and observability as signifier patterns.
+
 ---
 
 ### 3. Constraint Design — Are invalid states unrepresentable?
@@ -101,6 +116,8 @@ Action = Literal["create", "update", "delete"]
 
 **Infrastructure:** Circuit breakers, `--dry-run`, confirmation prompts for destructive actions. Fail closed, not open.
 
+> See [principles-reference.md](./principles-reference.md) for Norman's constraint taxonomy and the "make invalid states unrepresentable" ladder.
+
 ---
 
 ### 4. Conceptual Model — What picture forms in the caller's mind?
@@ -118,6 +135,8 @@ The conceptual model is the mental representation a user builds about how a syst
 ```
 
 **Rule:** The abstraction should never force the caller to reason about the implementation. When the abstraction leaks, the conceptual model is broken.
+
+> See [principles-reference.md](./principles-reference.md) for the three-layer model test and metaphor selection guidance.
 
 ---
 
@@ -137,6 +156,8 @@ from utils import helpers
 
 **Graveyard names:** `utils/`, `helpers/`, `common/`, `misc/`, `lib/` — these are where scent goes to die. Names like these signal that the author deferred the design decision.
 
+> See [principles-reference.md](./principles-reference.md) for the renaming test and API endpoint scent patterns.
+
 ---
 
 ### 6. Signal-to-Noise — Is every element earning its place?
@@ -155,6 +176,8 @@ client.create_user(user)
 ```
 
 **For CLIs:** Does every line of default output carry information? Verbose-by-default is a noise problem.
+
+> See [patterns-library.md](./patterns-library.md) for the CLI Feedback Contract pattern (timing table, failure feedback).
 
 ---
 
@@ -193,6 +216,8 @@ Working memory is limited to ~4±1 chunks (Cowan, 2005). Every concept, paramete
 - A module you can't summarize in one sentence probably has two responsibilities
 
 **Gestalt:** Related things should *look* related. Code that belongs together should be near each other, named similarly, and visually grouped. The human eye organizes by proximity and similarity before it reads — design with this, not against it.
+
+> See [principles-reference.md](./principles-reference.md) for the full Gestalt-to-code mapping table.
 
 ---
 
@@ -241,10 +266,4 @@ When *designing* something new, use this sequence:
 
 ---
 
-## Reference Material
-
-For the full principle library with citations and extended examples:
-→ See [principles-reference.md](./principles-reference.md)
-
-For domain-specific pattern libraries (API design, CLIs, error design, documentation):
-→ See [patterns-library.md](./patterns-library.md)
+For deeper treatment of any lens, see [principles-reference.md](./principles-reference.md) and [patterns-library.md](./patterns-library.md).
