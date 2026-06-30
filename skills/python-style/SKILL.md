@@ -35,6 +35,74 @@ compatibility: opencode, claude-code
   def fetch(timeout: int = 30): ...
   ```
 
+## ★ Optional and null handling
+
+- **Validate at system boundaries**: Catch null/invalid data at the adapter layer (network, file, CLI). Use Pydantic (or equivalent) where the external schema is untrusted. The adapter is the firewall — after validation, domain models can trust their types.
+
+  ```python
+  # adapter/github.py — boundary validation
+  class _GHPRNode(BaseModel):
+      number: int
+      title: str         # required — String! in GraphQL schema
+      author: str | None # nullable — deleted users
+
+  def list_prs(self, repo: str) -> list[PR]:
+      raw = self._graphql(QUERY, {"repo": repo})
+      validated = _GHPRListData(**raw)   # validate at boundary
+      return [_to_domain(node) for node in validated.repository.pull_requests.nodes]
+  ```
+
+- **Most fields should be non-optional**. Each `| None` must be warranted: a real business case where the source legitimately has no value (e.g., deleted GitHub user → author is null). Defaulting to nullable "just in case" erodes type safety.
+
+  ```python
+  # Bad: nullable without reason
+  @dataclass
+  class PR:
+      title: str | None  # PRs always have a title
+
+  # Good: non-nullable by default
+  @dataclass
+  class PR:
+      title: str
+      author: str | None  # warranted: deleted GitHub users
+  ```
+
+- **Never use empty string `""`, zero `0`, or sentinel values as stand-ins for null**. These disguise missing data as real values. If a field is legitimately absent, type it as `| None`. If a meaningful default exists (e.g., `timeout=30`), use it — that's not a null stand-in.
+
+  ```python
+  # Bad: empty stand-ins
+  author=stored.pr.author or ""
+  path=thread.path or ""
+
+  # Good: propagate Optional through the stack
+  author=stored.pr.author  # str | None
+  ```
+
+- **Push null handling outward**: The layer closest to the API boundary validates and types nulls correctly. The domain/application layer passes them through. The UI makes the final rendering decision.
+
+  ```
+  API (null) → Adapter (| None) → Domain (| None) → Action (| None) → UI ("[deleted]")
+  ```
+
+  ```python
+  # Adapter: passes null through
+  PR(author=validated.author)  # str | None, no fallback
+
+  # UI: describes *why* the value is missing
+  Text(entry.author) if entry.author is not None else Text("[deleted]", style=Style(dim=True))
+  ```
+
+  The UI should tell the user *why* a field is absent, not leave a blank cell. "[deleted]", "unknown", "N/A" are acceptable when they reflect the actual reason (e.g., deleted GitHub user).
+
+  For domain code that *needs* a fallback value (e.g., sorting, grouping), handle the None explicitly at that call site:
+
+  ```python
+  # Domain action: explicit None handling for a specific purpose
+  sorted_entries = sorted(entries, key=lambda e: e.author or "")
+  ```
+
+  This is different from `author or ""` at construction time — the fallback is scoped to the operation that needs it, not baked into the model.
+
 ## Code hygiene
 
 - Use `.get("key")` without a default — let `None` propagate naturally. Why: Avoids masking bugs; empty string or 0 can be valid data. Use default only when it's meaningful and `None` is a valid dict value.
