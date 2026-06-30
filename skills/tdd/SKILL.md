@@ -30,7 +30,11 @@ For each element in the plan:
 
 1. **Red** — Write a SINGLE failing test. One behavior, one assertion.
 2. **Green** — Write minimal code to make it pass.
-3. **Refactor** — Clean up while keeping tests green.
+3. **Refactor** — Review and refine code while keeping tests green:
+    1. Run automated linters and formatters with automated fixes.
+    2. Run automated static type checking and fix issues.
+    3. Review and refine the tests against [test-desiderata skill](/skills/test-desiderata/SKILL.md).
+    4. Review and refine the code against project conventions (e.g., python-style skill if applicable).
 4. **Ask for feedback** — Wait for human input before proceeding to the next test.
 
 Repeat for each test case.
