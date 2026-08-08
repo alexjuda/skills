@@ -1,0 +1,271 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.12"
+# dependencies = [
+#     "requests",
+#     "click",
+#     "pydantic",
+#     "msgspec",
+# ]
+# ///
+
+"""
+Exa Search CLI Tool
+A Python wrapper for the Exa Search API with proper type safety and validation.
+"""
+
+import os
+import sys
+import json
+from dataclasses import dataclass
+from typing import Literal
+
+import click
+import requests
+from pydantic import BaseModel, ValidationError
+
+
+EXA_API_URL = "https://api.exa.ai/search"
+DEFAULT_NUM_RESULTS = 10
+DEFAULT_TIMEOUT = 30
+
+# Literal types for search parameters
+SearchType = Literal["auto", "fast", "instant", "deep-lite", "deep", "deep-reasoning"]
+CategoryType = Literal["company", "people", "research paper", "news", "personal site", "financial report"]
+
+
+# Pydantic models for request/response validation
+class ContentsRequest(BaseModel):
+    highlights: bool = False
+    text: bool = False
+    summary: bool = False
+
+
+class SearchRequest(BaseModel):
+    query: str
+    type: SearchType = "auto"
+    numResults: int = DEFAULT_NUM_RESULTS
+    category: CategoryType | None = None
+    includeDomains: list[str] | None = None
+    excludeDomains: list[str] | None = None
+    startPublishedDate: str | None = None
+    endPublishedDate: str | None = None
+    contents: ContentsRequest | None = None
+
+
+class HighlightResult(BaseModel):
+    text: str
+    score: float
+
+
+class SearchResult(BaseModel):
+    id: str
+    title: str
+    url: str
+    publishedDate: str | None = None
+    author: str | None = None
+    highlights: list[str] | None = None
+    highlightScores: list[float] | None = None
+    summary: str | None = None
+    text: str | None = None
+    image: str | None = None
+    favicon: str | None = None
+
+
+class CostDollars(BaseModel):
+    total: float
+    search: dict[str, float] | None = None
+
+
+class SearchResponse(BaseModel):
+    requestId: str
+    resolvedSearchType: str
+    results: list[SearchResult]
+    searchTime: float
+    costDollars: CostDollars
+
+
+# Custom exceptions
+class ExaSearchError(Exception):
+    """Base exception for Exa Search errors."""
+    pass
+
+
+class ExaAPIError(ExaSearchError):
+    """Raised when Exa API returns an error."""
+    def __init__(self, status_code: int, message: str):
+        self.status_code = status_code
+        super().__init__(f"API error {status_code}: {message}")
+
+
+class ExaAuthError(ExaSearchError):
+    """Raised when authentication fails."""
+    def __init__(self):
+        super().__init__("EXA_API_KEY environment variable is not set. Set it with: export EXA_API_KEY='your-api-key'")
+
+
+class ExaNetworkError(ExaSearchError):
+    """Raised when network request fails."""
+    def __init__(self, message: str):
+        super().__init__(f"Network error: {message}")
+
+
+# Domain models (using msgspec-compatible dataclasses)
+@dataclass(slots=True)
+class SearchParams:
+    query: str
+    search_type: SearchType = "auto"
+    num_results: int = DEFAULT_NUM_RESULTS
+    category: CategoryType | None = None
+    include_domains: list[str] | None = None
+    exclude_domains: list[str] | None = None
+    start_date: str | None = None
+    end_date: str | None = None
+    contents_highlights: bool = False
+    contents_text: bool = False
+    contents_summary: bool = False
+
+
+# Service class for Exa API operations
+class ExaSearchClient:
+    """Client for interacting with Exa Search API."""
+
+    def __init__(self, api_key: str, timeout: int = DEFAULT_TIMEOUT):
+        self._api_key = api_key
+        self._timeout = timeout
+        self._session = requests.Session()
+        self._session.headers.update({
+            "Content-Type": "application/json",
+            "x-api-key": self._api_key,
+        })
+
+    def search(self, params: SearchParams) -> SearchResponse:
+        """Execute a search with the given parameters."""
+        request = self._build_request(params)
+        return self._execute_request(request)
+
+    def _build_request(self, params: SearchParams) -> SearchRequest:
+        """Build and validate the search request."""
+        contents = None
+        if any([params.contents_highlights, params.contents_text, params.contents_summary]):
+            contents = ContentsRequest(
+                highlights=params.contents_highlights,
+                text=params.contents_text,
+                summary=params.contents_summary,
+            )
+
+        return SearchRequest(
+            query=params.query,
+            type=params.search_type,
+            numResults=params.num_results,
+            category=params.category,
+            includeDomains=params.include_domains,
+            excludeDomains=params.exclude_domains,
+            startPublishedDate=params.start_date,
+            endPublishedDate=params.end_date,
+            contents=contents,
+        )
+
+    def _execute_request(self, request: SearchRequest) -> SearchResponse:
+        """Execute the HTTP request and validate response."""
+        try:
+            response = self._session.post(
+                EXA_API_URL,
+                json=request.model_dump(exclude_none=True),
+                timeout=self._timeout,
+            )
+            response.raise_for_status()
+            data = response.json()
+            return SearchResponse(**data)
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 401:
+                raise ExaAuthError()
+            raise ExaAPIError(e.response.status_code, e.response.text)
+        except requests.exceptions.RequestException as e:
+            raise ExaNetworkError(str(e))
+        except ValidationError as e:
+            raise ExaSearchError(f"Invalid response format: {e}")
+
+
+# CLI entry point
+def _get_api_key() -> str:
+    """Get API key from environment."""
+    api_key = os.environ.get("EXA_API_KEY")
+    if not api_key:
+        raise ExaAuthError()
+    return api_key
+
+
+def _parse_domain_list(value: str | None) -> list[str] | None:
+    """Parse comma-separated domain list."""
+    if not value:
+        return None
+    return [d.strip() for d in value.split(",")]
+
+
+@click.command()
+@click.argument("query")
+@click.option("--type", "search_type",
+              type=click.Choice(["auto", "fast", "instant", "deep-lite", "deep", "deep-reasoning"]),
+              default="auto", help="Search method")
+@click.option("--num-results", default=DEFAULT_NUM_RESULTS, type=int, help="Number of results to return")
+@click.option("--category",
+              type=click.Choice(["company", "people", "research paper", "news", "personal site", "financial report"]),
+              default=None, help="Specialized result type")
+@click.option("--include-domains", default=None, help="Comma-separated domains to include")
+@click.option("--exclude-domains", default=None, help="Comma-separated domains to exclude")
+@click.option("--start-date", default=None, help="Start date (ISO 8601)")
+@click.option("--end-date", default=None, help="End date (ISO 8601)")
+@click.option("--contents-highlights", is_flag=True, help="Include highlights in results")
+@click.option("--contents-text", is_flag=True, help="Include full text in results")
+@click.option("--contents-summary", is_flag=True, help="Include summaries in results")
+def main(
+    query: str,
+    search_type: SearchType,
+    num_results: int,
+    category: CategoryType | None,
+    include_domains: str | None,
+    exclude_domains: str | None,
+    start_date: str | None,
+    end_date: str | None,
+    contents_highlights: bool,
+    contents_text: bool,
+    contents_summary: bool,
+) -> None:
+    """Search the web using Exa Search API."""
+
+    try:
+        api_key = _get_api_key()
+    except ExaAuthError as e:
+        click.echo(str(e), err=True)
+        sys.exit(1)
+
+    params = SearchParams(
+        query=query,
+        search_type=search_type,
+        num_results=num_results,
+        category=category,
+        include_domains=_parse_domain_list(include_domains),
+        exclude_domains=_parse_domain_list(exclude_domains),
+        start_date=start_date,
+        end_date=end_date,
+        contents_highlights=contents_highlights,
+        contents_text=contents_text,
+        contents_summary=contents_summary,
+    )
+
+    client = ExaSearchClient(api_key)
+
+    click.echo("Executing search...", err=True)
+
+    try:
+        result = client.search(params)
+        # Use msgspec for fast JSON output
+        click.echo(result.model_dump_json(indent=2, exclude_none=True))
+    except ExaSearchError as e:
+        click.echo(f"Error: {e}", err=True)
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
