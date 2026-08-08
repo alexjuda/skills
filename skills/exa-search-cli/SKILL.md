@@ -1,6 +1,6 @@
 ---
 name: exa-search-cli
-description: "CLI tool for Exa Search using a Python script with uv inline dependencies for semantic web retrieval"
+description: "Use whenever the user or agent needs to search online, research web sources, find current information, or retrieve documentation. Provides an Exa Search CLI for semantic web retrieval."
 ---
 # Exa Search CLI
 
@@ -61,6 +61,19 @@ exa-search "kubernetes architecture" --start-date "2025-01-01" --end-date "2025-
 # Deep search with text extraction
 exa-search "compare sodium-ion batteries" --type deep --contents-text
 ```
+
+## Usage Guidelines
+
+This skill should be used whenever the agent or the user needs to search for information online. Use it for:
+
+- General web searches for knowledge and facts
+- Researching topics, concepts, or technical documentation
+- Finding current information, news, or recent updates
+- Searching for examples, tutorials, or guides
+- Finding official documentation or authoritative sources
+- Any situation where web search would help answer questions
+
+**Not appropriate for:** Personal/proprietary data, internal company information, or sensitive queries that shouldn't be publicly accessible.
 
 ## Implementation
 
