@@ -8,7 +8,9 @@ This skill provides a CLI tool for Exa Search using a Python script with uv inli
 
 ## Quick Start
 
-The script is located at `/home/alex/.config/opencode/skills/exa-search-cli/exa-search` and can be run directly. It's self-contained: uv auto-installs any dependencies on first run, and the script itself validates required environment variables and prerequisites, reporting clear errors when anything is missing.
+The script is located at `./exa-search` in the same directory as this SKILL.md file and can be run directly. It's self-contained: uv auto-installs any dependencies on first run, and the script itself validates required environment variables and prerequisites, reporting clear errors when anything is missing. The script uses a shebang (`#!/usr/bin/env -S uv run --script`) making it directly executable.
+
+**Location**: The script and SKILL.md file are in the same directory, so `./exa-search` will work when run from this directory.
 
 ### Basic Search
 
