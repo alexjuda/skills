@@ -651,6 +651,7 @@ class GitHub:
 - Integration tests: `pytest-recording` (VCR) for network tests. Two-phase: real API first with credential env var, then record cassettes for CI. Filter credentials via `filter_headers`.
 - Linting/formatting: `make lint` in the project directory. Use `make lint-fix` to reformat automatically. CI should run `make lint` without fix.
 - Type checking: `make ty` in the project directory.
+- **Self-contained scripts** (single-file Python scripts with inline deps): validate directly with `ty check <file>` and `ruff check <file>` — don't rely on project makefiles. Run both after editing and before committing. Why: self-contained scripts have no project-level tool config; the tools work out-of-the-box on the file.
 
 ---
 
