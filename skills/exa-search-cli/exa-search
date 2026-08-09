@@ -15,8 +15,8 @@ A Python wrapper for the Exa Search API with proper type safety and validation.
 """
 
 import os
+import subprocess
 import sys
-import json
 from dataclasses import dataclass
 from typing import Literal
 
@@ -101,7 +101,10 @@ class ExaAPIError(ExaSearchError):
 class ExaAuthError(ExaSearchError):
     """Raised when authentication fails."""
     def __init__(self):
-        super().__init__("EXA_API_KEY environment variable is not set. Set it with: export EXA_API_KEY='your-api-key'")
+        super().__init__(
+            "EXA_API_KEY is not set and 1password is unavailable. "
+            "Set it with: export EXA_API_KEY=$(op read \"op://Private/Exa search api key/credential\")"
+        )
 
 
 class ExaNetworkError(ExaSearchError):
@@ -189,11 +192,17 @@ class ExaSearchClient:
 
 # CLI entry point
 def _get_api_key() -> str:
-    """Get API key from environment."""
+    """Get API key from environment, falling back to 1password."""
     api_key = os.environ.get("EXA_API_KEY")
-    if not api_key:
+    if api_key:
+        return api_key
+    try:
+        return subprocess.check_output(
+            ["op", "read", "op://Private/Exa search api key/credential"],
+            text=True,
+        ).strip()
+    except (FileNotFoundError, subprocess.CalledProcessError):
         raise ExaAuthError()
-    return api_key
 
 
 def _parse_domain_list(value: str | None) -> list[str] | None:
