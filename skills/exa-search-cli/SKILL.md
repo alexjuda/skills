@@ -15,19 +15,22 @@ The script is located at `./exa-search` in the same directory as this SKILL.md f
 ### Basic Search
 
 ```bash
-exa-search "kubernetes architecture" --type auto --num-results 5
+cd <skill-dir>
+./exa-search "kubernetes architecture" --type auto --num-results 5
 ```
 
 ### With Highlights
 
 ```bash
-exa-search "kubernetes components" --contents-highlights
+cd <skill-dir>
+./exa-search "kubernetes components" --contents-highlights
 ```
 
 ### With Filters
 
 ```bash
-exa-search "AI regulation policy updates" --category news --start-date "2025-01-01"
+cd <skill-dir>
+./exa-search "AI regulation policy updates" --category news --start-date "2025-01-01"
 ```
 
 ## Parameters
@@ -49,17 +52,20 @@ exa-search "AI regulation policy updates" --category news --start-date "2025-01-
 ## Examples
 
 ```bash
+
+cd <skill-dir>
+
 # Basic search
-exa-search "kubernetes components" --type auto --num-results 3
+./exa-search "kubernetes components" --type auto --num-results 3
 
 # Search with highlights
-exa-search "kubernetes nodes" --contents-highlights
+./exa-search "kubernetes nodes" --contents-highlights
 
 # Search with date range
-exa-search "kubernetes architecture" --start-date "2025-01-01" --end-date "2025-12-31"
+./exa-search "kubernetes architecture" --start-date "2025-01-01" --end-date "2025-12-31"
 
 # Deep search with text extraction
-exa-search "compare sodium-ion batteries" --type deep --contents-text
+./exa-search "compare sodium-ion batteries" --type deep --contents-text
 ```
 
 ## Usage Guidelines
