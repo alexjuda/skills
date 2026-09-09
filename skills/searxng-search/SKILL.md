@@ -24,6 +24,9 @@ cd <path-to-skill-dir>
 | `--json` | Output as structured JSON instead of human-readable text |
 | `--max-results` | Number of results to return (default: 10) |
 
+
+Use `--json` for structured output when you need to parse results programmatically (ideally, with `jq`). Use `--max-results 10` as a starting point, reduce for focused queries.
+
 ## Examples
 
 ```bash
