@@ -39,7 +39,7 @@ cd <path-to-skill-dir>
 ./searxng_search.py "python asyncio patterns" --max-results 3
 
 # JSON output for analysis
-./searxng_search.py "Kubernetes vs Docker Swarm" --json --max-results 5 2>/dev/null
+./searxng_search.py "Kubernetes vs Docker Swarm" --max-results 5 --json | jq '.[].title, .[].url, .[].content[:500]'
 ```
 
 ## Usage Guidelines
