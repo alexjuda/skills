@@ -103,6 +103,26 @@ compatibility: opencode, claude-code
 
   This is different from `author or ""` at construction time — the fallback is scoped to the operation that needs it, not baked into the model.
 
+- **Fix type mismatches at the conversion layer, not in the data models.** When converting between data models with incompatible nullability (optional → required, required → optional), synthesize in the converter. Models describe what they are — don't weaken types to accommodate a consumer. Converters bridge what is and what's needed.
+
+  ```python
+  @dataclass
+  class UserFile:
+      nickname: str | None
+      email: str
+
+  @dataclass
+  class UserProfile:
+      display_name: str     # app never handles null names
+      email: str
+
+  def convert(user_file: UserFile) -> UserProfile:
+      return UserProfile(
+          display_name=user_file.nickname or user_file.email or "User",
+          email=user_file.email,
+      )
+  ```
+
 ## Code hygiene
 
 - Use `.get("key")` without a default — let `None` propagate naturally. Why: Avoids masking bugs; empty string or 0 can be valid data. Use default only when it's meaningful and `None` is a valid dict value.
