@@ -56,15 +56,11 @@ cd <path-to-skill-dir>
 ./searxng_search.py "climate change solutions" --categories science --max-results 5 --json
 ```
 
-## Reading Linked Pages
+## Read Linked Pages
 
-Search results only give you snippets. When a result is worth answering from, read the actual page:
+Search results only give you snippets, which can be incomplete or misleading. Always fetch and read the full linked pages before synthesizing an answer.
 
-```bash
-curl -sL <url> | html2markdown
-```
-
-**Key constraint:** `html2markdown` reads from stdin or files — **not** URLs. Always fetch first with `curl`.
+The workflow: search → pick relevant URLs → `curl -sL <url> | html2markdown` → read the actual content → then answer.
 
 ### Pattern
 
@@ -74,13 +70,19 @@ query ──→ searxng_search ──→ [title, url, snippet]
               pick relevant URLs  │
                              ▼
                  curl -sL <url> ──→ html2markdown ──→ markdown text
+                                         │
+                                 read and synthesize
 ```
 
-### When to Use It
+### How to Read Pages
 
-- Answering questions with source grounding — don't just read snippets, get the actual content
-- Researching topics — fetch the top few sources, read them, synthesize
-- Verifying facts — search for something, then read the linked pages to confirm
+```bash
+curl -sL <url> | html2markdown | head -300
+```
+
+**Key constraint:** `html2markdown` reads from stdin or files — **not** URLs. Always fetch first with `curl`.
+
+For multiple URLs, batch with `Promise.all` in a codemode script.
 
 ### Notes
 
