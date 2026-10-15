@@ -11,9 +11,11 @@ Usage as a CLI:
 Usage as a module:
     from searxng_search import searx_search
 
-    results = searx_search("what is Kubernetes?")
+    results, unresponsive = searx_search("what is Kubernetes?")
     for r in results:
         print(r.title, r.url, r.content)
+    if unresponsive:
+        print(f"Unresponsive engines: {unresponsive}")
 
 Usage as a tool (return JSON for agent consumption):
     searxng_search.py "your query" --json
@@ -106,7 +108,7 @@ def searx_search(
     engines: str | None = None,
     max_results: int | None = None,
     timeout: int = REQUEST_TIMEOUT,
-) -> list[SearchResult]:
+) -> tuple[list[SearchResult], list[str]]:
     """Search SearXNG and return structured results."""
     params = _build_params(
         query,
@@ -165,20 +167,29 @@ def searx_search(
     if max_results is not None:
         results = results[:max_results]
 
-    return results
+    return results, unresponsive
 
 
 def print_results(
     results: list[SearchResult],
+    unresponsive: list[str] | None = None,
     *,
     json_output: bool = False,
 ) -> None:
     if json_output:
-        print(json.dumps([r.to_dict() for r in results], indent=2))
+        output: dict = {"results": [r.to_dict() for r in results]}
+        if unresponsive:
+            output["unresponsive_engines"] = unresponsive
+        print(json.dumps(output, indent=2))
         return
 
     if not results:
         print("No results found.", file=sys.stderr)
+        if unresponsive:
+            suspended = [u for u in unresponsive if "Suspended" in u or "timeout" in u.lower()]
+            if suspended:
+                for s in suspended:
+                    print(f"  ⚠  Engine suspended: {s}", file=sys.stderr)
         return
 
     for i, r in enumerate(results, 1):
@@ -250,7 +261,7 @@ def main() -> None:
     args = parser.parse_args()
 
     try:
-        results = searx_search(
+        results, unresponsive = searx_search(
             args.query,
             categories=args.categories,
             language=args.language,
@@ -264,7 +275,7 @@ def main() -> None:
         print(f"Error: {exc}", file=sys.stderr)
         sys.exit(1)
 
-    print_results(results, json_output=args.json_output)
+    print_results(results, unresponsive=unresponsive if unresponsive else None, json_output=args.json_output)
 
 
 if __name__ == "__main__":
