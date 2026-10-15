@@ -22,8 +22,13 @@ cd <path-to-skill-dir>
 |-----------|-------------|
 | `query` | Search query (required positional argument) |
 | `--json` | Output as structured JSON instead of human-readable text |
-| `--max-results` | Number of results to return (default: 10) |
-
+| `--max-results N` | Maximum number of results (default: 10) |
+| `--categories CAT` | Filter by category (e.g. `'it'`, `'news'`, `'science'`) |
+| `--language LANG` | Language code (default: `'en'`) |
+| `--time-range RANGE` | Filter by recency: `'day'`, `'week'`, `'month'`, `'year'` |
+| `--engines ENGINES` | Override engines (e.g. `'google,duckduckgo'`) |
+| `--timeout SECS` | Request timeout in seconds (default: 15) |
+| `--safesearch LEVEL` | Safe search level: `'off'`, `'moderate'`, `'strict'` (default: `'off'`) |
 
 Use `--json` for structured output when you need to parse results programmatically (ideally, with `jq`). Use `--max-results 10` as a starting point, reduce for focused queries.
 
@@ -38,9 +43,41 @@ cd <path-to-skill-dir>
 # Limit results
 ./searxng_search.py "python asyncio patterns" --max-results 3
 
-# JSON output for analysis
-./searxng_search.py "Kubernetes vs Docker Swarm" --max-results 5 --json | jq '.[].title, .[].url, .[].content[:500]'
+# JSON output — note: results are wrapped in a "results" key, so use .results[]
+./searxng_search.py "Kubernetes vs Docker Swarm" --max-results 5 --json | jq '.results[] | {title, url, content: .content[:500]}'
+
+# Search recent news (last week)
+./searxng_search.py "AI regulation" --time-range week --max-results 5 --json
+
+# Search with specific engines
+./searxng_search.py "Rust async best practices" --engines "google,bing" --max-results 5 --json
+
+# Search in a specific category
+./searxng_search.py "climate change solutions" --categories science --max-results 5 --json
 ```
+
+## JSON Output Structure
+
+When using `--json`, the output is:
+
+```json
+{
+  "results": [
+    {
+      "title": "...",
+      "url": "...",
+      "content": "...",
+      "engine": "...",
+      "score": 0.5,
+      "category": "general",
+      "published_date": "..."
+    }
+  ],
+  "unresponsive_engines": ["engine1: reason", ...]
+}
+```
+
+Use `.results[]` in `jq` to iterate results. `unresponsive_engines` is optional and only present if some search engines failed.
 
 ## Usage Guidelines
 
@@ -57,5 +94,5 @@ Use this for:
 
 ## Notes
 
-- Powered by your self-hosted SearXNG instance
-- Unresponsive engines are silently filtered — you only get working results
+- Powered by your self-hosted SearXNG instance (default: `http://sumac0:32031`)
+- Override the instance URL via `SEARXNG_BASE_URL` environment variable
