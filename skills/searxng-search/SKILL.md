@@ -56,6 +56,37 @@ cd <path-to-skill-dir>
 ./searxng_search.py "climate change solutions" --categories science --max-results 5 --json
 ```
 
+## Reading Linked Pages
+
+Search results only give you snippets. When a result is worth answering from, read the actual page:
+
+```bash
+curl -sL <url> | html2markdown
+```
+
+**Key constraint:** `html2markdown` reads from stdin or files — **not** URLs. Always fetch first with `curl`.
+
+### Pattern
+
+```
+query ──→ searxng_search ──→ [title, url, snippet]
+                             │
+              pick relevant URLs  │
+                             ▼
+                 curl -sL <url> ──→ html2markdown ──→ markdown text
+```
+
+### When to Use It
+
+- Answering questions with source grounding — don't just read snippets, get the actual content
+- Researching topics — fetch the top few sources, read them, synthesize
+- Verifying facts — search for something, then read the linked pages to confirm
+
+### Notes
+
+- Pages over ~50KB get truncated by `html2markdown`. Use `head -N` or save to a file and `read` in sections.
+- For multiple URLs at once, batch with `Promise.all` (e.g. in a codemode script).
+
 ## JSON Output Structure
 
 When using `--json`, the output is:
