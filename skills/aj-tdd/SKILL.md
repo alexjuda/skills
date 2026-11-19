@@ -1,5 +1,5 @@
 ---
-name: tdd
+name: aj-tdd
 description: Apply Test-Driven Development — red/green/refactor cycle to drive code and design
 compatibility: opencode, claude-code
 ---
